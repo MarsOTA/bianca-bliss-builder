@@ -35,6 +35,9 @@ export interface Operator {
   role: string;
   availability: "Disponibile" | "Occupato" | "In ferie";
   phone?: string;
+  email?: string;
+  fiscalCode?: string;
+  photo?: string;
 }
 
 export interface EventItem {
@@ -199,10 +202,46 @@ const initialBrands: Brand[] = [
 ];
 
 const initialOperators: Operator[] = [
-  { id: "o1", name: "Mario Rossi", role: "Guardia", availability: "Disponibile", phone: "333-1234567" },
-  { id: "o2", name: "Luca Bianchi", role: "Supervisore", availability: "Disponibile", phone: "335-9876543" },
-  { id: "o3", name: "Anna Verdi", role: "Guardia", availability: "Occupato", phone: "340-1122334" },
-  { id: "o4", name: "Sara Neri", role: "Addetto Accoglienza", availability: "Disponibile", phone: "338-5566778" },
+  { 
+    id: "o1", 
+    name: "Mario Rossi", 
+    role: "Guardia", 
+    availability: "Disponibile", 
+    phone: "333-1234567",
+    email: "mario.rossi@security.it",
+    fiscalCode: "RSSMRA80A01H501X",
+    photo: "/placeholder.svg"
+  },
+  { 
+    id: "o2", 
+    name: "Luca Bianchi", 
+    role: "Supervisore", 
+    availability: "Disponibile", 
+    phone: "335-9876543",
+    email: "luca.bianchi@security.it",
+    fiscalCode: "BNCLCU75B15F205Y",
+    photo: "/placeholder.svg"
+  },
+  { 
+    id: "o3", 
+    name: "Anna Verdi", 
+    role: "Guardia", 
+    availability: "Occupato", 
+    phone: "340-1122334",
+    email: "anna.verdi@security.it",
+    fiscalCode: "VRDNNA85C55H501Z",
+    photo: "/placeholder.svg"
+  },
+  { 
+    id: "o4", 
+    name: "Sara Neri", 
+    role: "Addetto Accoglienza", 
+    availability: "Disponibile", 
+    phone: "338-5566778",
+    email: "sara.neri@security.it",
+    fiscalCode: "NRESRA90D45H501W",
+    photo: "/placeholder.svg"
+  },
 ];
 
 export const useAppStore = create<AppState>()(

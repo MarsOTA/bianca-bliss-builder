@@ -1,11 +1,12 @@
 import { Helmet } from "react-helmet-async";
 import { useParams } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAppStore, ACTIVITY_TYPES, type ActivityType } from "@/store/appStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarIcon, Users, Crown, UserPlus, Plus, Trash2, Edit2, Save, X, FileText, ArrowUpDown, ArrowUp, ArrowDown, ListChecks, Clock, Building2, MapPin, Calendar, Badge, Copy, Phone, StickyNote, Lock, Unlock } from "lucide-react";
+import OperatorDetailsDialog from "@/components/events/OperatorDetailsDialog";
 import OperatorAssignDialog from "@/components/events/OperatorAssignDialog";
 import ShiftPlanningForm from "@/components/events/ShiftPlanningForm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -46,9 +47,31 @@ const EventDetail = () => {
   const [slotTimes, setSlotTimes] = useState<Record<string, { startTime: string; endTime: string }>>({});
   const [editingPhones, setEditingPhones] = useState<Record<string, string>>({});
   const [slotNotes, setSlotNotes] = useState<Record<string, string>>({});
-  const [rowEdit, setRowEdit] = useState<Record<string, boolean>>({});
+  // Initialize row edit state: unassigned rows start in edit mode
+  const initializeRowEdit = (shifts: any[]) => {
+    const initialState: Record<string, boolean> = {};
+    shifts.forEach(shift => {
+      shift.operatorIds.forEach((operatorId: any, slotIndex: number) => {
+        const rowKey = `${shift.id}-${slotIndex}`;
+        const isAssigned = operatorId && operatorId.trim() !== "";
+        initialState[rowKey] = !isAssigned; // Unassigned rows start in edit mode
+      });
+    });
+    return initialState;
+  };
+
+  // Update rowEdit when shifts change
+  const [rowEdit, setRowEdit] = useState<Record<string, boolean>>(() => initializeRowEdit(shifts));
+  
+  // Update rowEdit when shifts change
+  useEffect(() => {
+    const newRowEdit = initializeRowEdit(shifts);
+    setRowEdit(prev => ({ ...prev, ...newRowEdit }));
+  }, [shifts]);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedShiftForEmail, setSelectedShiftForEmail] = useState<any>(null);
+  const [operatorDetailsOpen, setOperatorDetailsOpen] = useState(false);
+  const [selectedOperator, setSelectedOperator] = useState<any>(null);
   const [notePopoverOpen, setNotePopoverOpen] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
@@ -515,7 +538,7 @@ const EventDetail = () => {
                     {sort.key !== 'operator' ? <ArrowUpDown className="h-4 w-4 text-muted-foreground" /> : (sort.dir === 'asc' ? <ArrowUp className="h-4 w-4 text-muted-foreground" /> : <ArrowDown className="h-4 w-4 text-muted-foreground" />)}
                   </Button>
                 </TableHead>
-                <TableHead>TEL</TableHead>
+                
                 <TableHead>
                   <Button variant="ghost" size="sm" onClick={() => toggleSort('hours')} className="px-0">
                     <span className="mr-2">ORE TOTALI</span>
@@ -531,7 +554,10 @@ const EventDetail = () => {
               {sortedShifts.map((row, index) => (
                 <TableRow 
                   key={`${row.id}-${row.slotIndex}`}
-                  className="even:bg-muted transition-all duration-300 hover:bg-muted/80"
+                  className={cn(
+                    "even:bg-muted transition-all duration-300 hover:bg-muted/80",
+                    !row.isAssigned && "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-300"
+                  )}
                 >
                   <TableCell>
                     {rowEdit[`${row.id}-${row.slotIndex}`] ? (
@@ -604,61 +630,57 @@ const EventDetail = () => {
                       <span className="text-sm">{row.activityType || "Non specificata"}</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
-                      row.isAssigned ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{getOperatorName(row.operatorId)}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => {
-                              setCurrentShift(row.id);
-                              setCurrentSlotIndex(row.slotIndex);
-                              setAssignOpen(true);
-                            }}
-                            aria-label={`Modifica operatore ${getOperatorName(row.operatorId)}`}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            setCurrentShift(row.id);
-                            setCurrentSlotIndex(row.slotIndex);
-                            setAssignOpen(true);
-                          }}
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          Assegna
-                        </Button>
-                      )
-                    ) : (
-                      <span className="text-sm">{row.isAssigned ? getOperatorName(row.operatorId) : "Non assegnato"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        {row.isAssigned ? (
-                          <Input
-                            value={editingPhones[`${row.id}-${row.slotIndex}`] || getOperatorPhone(row.operatorId)}
-                            onChange={(e) => setEditingPhones(prev => ({ ...prev, [`${row.id}-${row.slotIndex}`]: e.target.value }))}
-                            className="h-6 text-xs w-24"
-                            placeholder="Telefono"
-                          />
-                        ) : (
-                          <span className="text-sm">-</span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-sm">{row.isAssigned ? getOperatorPhone(row.operatorId) : "-"}</span>
-                    )}
-                  </TableCell>
+                   <TableCell>
+                     {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                       row.isAssigned ? (
+                         <div className="flex items-center gap-2">
+                           <span className="text-sm font-medium">{getOperatorName(row.operatorId)}</span>
+                           <Button 
+                             variant="ghost" 
+                             size="sm" 
+                             onClick={() => {
+                               setCurrentShift(row.id);
+                               setCurrentSlotIndex(row.slotIndex);
+                               setAssignOpen(true);
+                             }}
+                             aria-label={`Modifica operatore ${getOperatorName(row.operatorId)}`}
+                           >
+                             <Edit2 className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       ) : (
+                         <Button 
+                           variant="outline" 
+                           size="sm" 
+                           onClick={() => {
+                             setCurrentShift(row.id);
+                             setCurrentSlotIndex(row.slotIndex);
+                             setAssignOpen(true);
+                           }}
+                         >
+                           <UserPlus className="h-4 w-4" />
+                           Assegna
+                         </Button>
+                       )
+                     ) : (
+                       row.isAssigned ? (
+                         <button
+                           className="text-sm text-primary hover:underline cursor-pointer transition-colors"
+                           onClick={() => {
+                             const operator = operators.find(op => op.id === row.operatorId);
+                             if (operator) {
+                               setSelectedOperator(operator);
+                               setOperatorDetailsOpen(true);
+                             }
+                           }}
+                         >
+                           {getOperatorName(row.operatorId)}
+                         </button>
+                       ) : (
+                         <span className="text-sm font-medium text-orange-700">Non assegnato</span>
+                       )
+                     )}
+                   </TableCell>
                   <TableCell>
                     {rowEdit[`${row.id}-${row.slotIndex}`] ? (
                       <Input
@@ -785,7 +807,35 @@ const EventDetail = () => {
                         )}
                       </div>
                     ) : (
-                      <span className="text-sm">{(slotNotes[`${row.id}-${row.slotIndex}`] || row.notes) ? "📝" : "-"}</span>
+                      <div className="flex items-center justify-center">
+                        {(slotNotes[`${row.id}-${row.slotIndex}`] || row.notes) ? (
+                          <Popover 
+                            open={notePopoverOpen[`${row.id}-${row.slotIndex}`]} 
+                            onOpenChange={(open) => setNotePopoverOpen(prev => ({ ...prev, [`${row.id}-${row.slotIndex}`]: open }))}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                aria-label="Visualizza note"
+                              >
+                                <StickyNote className="h-4 w-4 text-primary" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 pointer-events-auto" align="center">
+                              <div className="space-y-4">
+                                <h4 className="font-medium">Note del turno</h4>
+                                <div className="p-3 bg-muted rounded-md">
+                                  <p className="text-sm">{slotNotes[`${row.id}-${row.slotIndex}`] || row.notes}</p>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -841,7 +891,7 @@ const EventDetail = () => {
               ))}
               {sortedShifts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     Nessun turno pianificato. Crea il primo turno.
                   </TableCell>
                 </TableRow>
@@ -937,7 +987,13 @@ const EventDetail = () => {
         </DialogContent>
       </Dialog>
 
-      <OperatorAssignDialog 
+      <OperatorDetailsDialog
+        operator={selectedOperator}
+        open={operatorDetailsOpen}
+        onOpenChange={setOperatorDetailsOpen}
+      />
+
+      <OperatorAssignDialog
         open={assignOpen} 
         onOpenChange={setAssignOpen} 
         operators={currentShift ? operators.filter(op => !shifts.find(s => s.id === currentShift)?.operatorIds.includes(op.id)) : operators} 
