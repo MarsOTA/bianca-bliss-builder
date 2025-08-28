@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Lock, Unlock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Shift = {
   id: string;
@@ -24,14 +26,14 @@ export default function TaskList({ shifts, onUpdateShift }: Props) {
     return <div className="text-sm text-muted-foreground px-2 py-4">Nessun turno inserito.</div>;
   }
 
-  // Totali (se ti servono in fondo, lasciali; altrimenti puoi rimuovere la sezione <tfoot>)
+  // Totali (senza pause)
   const totalEffective = shifts.reduce((sum, s) => {
-    const eff = parseFloat(calcEffectiveHours(s.startTime, s.endTime, s.pauseHours ?? 0));
+    const eff = parseFloat(calcEffectiveHours(s.startTime, s.endTime));
     return sum + (isNaN(eff) ? 0 : eff);
   }, 0);
 
   const totalOperatorHours = shifts.reduce((sum, s) => {
-    const eff = parseFloat(calcEffectiveHours(s.startTime, s.endTime, s.pauseHours ?? 0));
+    const eff = parseFloat(calcEffectiveHours(s.startTime, s.endTime));
     const ops = clampInt(s.numOperators ?? 1, 1, 20);
     return sum + (isNaN(eff) ? 0 : eff) * ops;
   }, 0);
@@ -48,7 +50,6 @@ export default function TaskList({ shifts, onUpdateShift }: Props) {
             <th>Operatore</th>
             <th>TEL</th>
             <th>N° operatori</th>
-            <th>Pausa h.</th>
             <th>Ore effettive</th>
             <th>Ore operatori</th>
             <th className="text-right pr-3">Azioni</th>
@@ -61,7 +62,7 @@ export default function TaskList({ shifts, onUpdateShift }: Props) {
         </tbody>
         <tfoot className="bg-muted/30 font-semibold">
           <tr>
-            <td colSpan={8} className="px-3 py-2 text-right">Totali:</td>
+            <td colSpan={7} className="px-3 py-2 text-right">Totali:</td>
             <td className="px-3 py-2">{totalEffective.toFixed(2)}</td>
             <td className="px-3 py-2">{totalOperatorHours.toFixed(2)}</td>
             <td />
@@ -73,17 +74,8 @@ export default function TaskList({ shifts, onUpdateShift }: Props) {
 }
 
 function Row({ shift, onUpdate }: { shift: Shift; onUpdate: (patch: Partial<Shift>) => void }) {
-  const [pauseVal, setPauseVal] = useState<string>((shift.pauseHours ?? 0).toString());
+  const [isEditable, setIsEditable] = useState(false);
   const [opsVal, setOpsVal] = useState<string>(String(clampInt(shift.numOperators ?? 1, 1, 20)));
-
-  const commitPause = () => {
-    const n = Number(String(pauseVal).replace(",", "."));
-    if (isNaN(n) || n < 0) {
-      setPauseVal((shift.pauseHours ?? 0).toString());
-      return;
-    }
-    if (n !== (shift.pauseHours ?? 0)) onUpdate({ pauseHours: n });
-  };
 
   const commitOps = () => {
     const n = clampInt(parseInt(opsVal || "1", 10), 1, 20);
@@ -92,97 +84,156 @@ function Row({ shift, onUpdate }: { shift: Shift; onUpdate: (patch: Partial<Shif
     if (n !== current) onUpdate({ numOperators: n });
   };
 
-  const effectiveHoursStr = calcEffectiveHours(shift.startTime, shift.endTime, shift.pauseHours ?? 0);
+  const effectiveHoursStr = calcEffectiveHours(shift.startTime, shift.endTime);
   const effectiveHours = parseFloat(effectiveHoursStr);
   const operators = clampInt(shift.numOperators ?? 1, 1, 20);
   const operatorHours = isNaN(effectiveHours) ? "0.00" : (effectiveHours * operators).toFixed(2);
 
-  // ✅ Rilevazione "non assegnato" + logica più robusta
   const noName =
     !shift.operator ||
     (typeof shift.operator === "string" && shift.operator.trim() === "") ||
     (typeof shift.operator === "string" && shift.operator.toLowerCase().includes("assegna"));
   
   const noPhone = !shift.phone || shift.phone === "-" || shift.phone.trim() === "";
-  
   const unassigned = (!shift.operatorId && noName) || noPhone;
 
-  // Debug: aggiungi questo per vedere cosa sta succedendo
-  console.log('Shift:', shift.id, {
-    operator: shift.operator,
-    operatorId: shift.operatorId,
-    phone: shift.phone,
-    noName,
-    noPhone,
-    unassigned
-  });
+  const toggleEdit = () => {
+    setIsEditable(!isEditable);
+  };
 
   return (
     <tr
-      className={`[&>td]:px-3 [&>td]:py-2 border-t ${
-        unassigned ? '!bg-orange-100 hover:!bg-orange-200' : 'hover:bg-muted/50'
+      className={`[&>td]:px-3 [&>td]:py-2 border-t transition-colors ${
+        unassigned ? 'bg-orange-100 hover:bg-orange-200' : 'hover:bg-muted/50'
       }`}
-      style={unassigned ? { 
-        backgroundColor: '#FED7AA !important',
-        '--tw-bg-opacity': '1'
-      } : undefined}
     >
-      <td className="whitespace-nowrap">{safeItDate(shift.date)}</td>
-      <td className="whitespace-nowrap">{shift.startTime}</td>
-      <td className="whitespace-nowrap">{shift.endTime}</td>
-      <td className="whitespace-nowrap">{shift.activityType}</td>
-      <td className={`whitespace-nowrap ${unassigned ? 'font-semibold text-orange-800' : ''}`}>
-        {shift.operator ?? "—"}
-        {unassigned && <span className="ml-1 text-xs text-orange-600">(non assegnato)</span>}
+      <td className="whitespace-nowrap">
+        {isEditable ? (
+          <Input
+            type="date"
+            value={shift.date}
+            onChange={(e) => onUpdate({ date: e.target.value })}
+            className="h-8 w-32"
+          />
+        ) : (
+          safeItDate(shift.date)
+        )}
       </td>
+      
+      <td className="whitespace-nowrap">
+        {isEditable ? (
+          <Input
+            type="time"
+            value={shift.startTime}
+            onChange={(e) => onUpdate({ startTime: e.target.value })}
+            className="h-8 w-20"
+          />
+        ) : (
+          shift.startTime
+        )}
+      </td>
+      
+      <td className="whitespace-nowrap">
+        {isEditable ? (
+          <Input
+            type="time"
+            value={shift.endTime}
+            onChange={(e) => onUpdate({ endTime: e.target.value })}
+            className="h-8 w-20"
+          />
+        ) : (
+          shift.endTime
+        )}
+      </td>
+      
+      <td className="whitespace-nowrap">
+        {isEditable ? (
+          <Input
+            value={shift.activityType}
+            onChange={(e) => onUpdate({ activityType: e.target.value })}
+            className="h-8 w-32"
+          />
+        ) : (
+          shift.activityType
+        )}
+      </td>
+      
       <td className={`whitespace-nowrap ${unassigned ? 'font-semibold text-orange-800' : ''}`}>
-        {shift.phone ?? "-"}
+        {isEditable ? (
+          <Input
+            value={shift.operator ?? ""}
+            onChange={(e) => onUpdate({ operator: e.target.value })}
+            className="h-8 w-32"
+            placeholder="Nome operatore"
+          />
+        ) : (
+          <>
+            {shift.operator ?? "—"}
+            {unassigned && <span className="ml-1 text-xs text-orange-600">(non assegnato)</span>}
+          </>
+        )}
+      </td>
+      
+      <td className={`whitespace-nowrap ${unassigned ? 'font-semibold text-orange-800' : ''}`}>
+        {isEditable ? (
+          <Input
+            value={shift.phone ?? ""}
+            onChange={(e) => onUpdate({ phone: e.target.value })}
+            className="h-8 w-32"
+            placeholder="Telefono"
+          />
+        ) : (
+          shift.phone ?? "-"
+        )}
       </td>
 
-      {/* N° operatori */}
       <td className="whitespace-nowrap">
-        <Input
-          type="number"
-          min={1}
-          max={20}
-          step={1}
-          className="h-9 w-24 text-right"
-          value={opsVal}
-          onChange={(e) => setOpsVal(e.target.value)}
-          onBlur={commitOps}
-          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        />
-      </td>
-
-      {/* Pausa h. */}
-      <td className="whitespace-nowrap">
-        <Input
-          type="number"
-          min="0"
-          step="0.25"
-          className="h-9 w-24 text-right"
-          value={pauseVal}
-          onChange={(e) => setPauseVal(e.target.value)}
-          onBlur={commitPause}
-          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        />
+        {isEditable ? (
+          <Input
+            type="number"
+            min={1}
+            max={20}
+            step={1}
+            className="h-8 w-20 text-right"
+            value={opsVal}
+            onChange={(e) => setOpsVal(e.target.value)}
+            onBlur={commitOps}
+            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+          />
+        ) : (
+          operators.toString()
+        )}
       </td>
 
       <td className="whitespace-nowrap">{effectiveHoursStr}</td>
       <td className="whitespace-nowrap">{operatorHours}</td>
-      <td className="text-right">{/* pulsanti azioni esistenti */}</td>
+      
+      <td className="text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleEdit}
+          className="h-8 w-8 p-0 transition-all duration-300 hover:scale-110"
+        >
+          {isEditable ? (
+            <Unlock className="h-4 w-4 text-green-600 transition-transform duration-300" />
+          ) : (
+            <Lock className="h-4 w-4 text-muted-foreground transition-transform duration-300" />
+          )}
+        </Button>
+      </td>
     </tr>
   );
 }
 
 // Utils
-function calcEffectiveHours(start: string, end: string, pause: number): string {
+function calcEffectiveHours(start: string, end: string): string {
   try {
     const [sh, sm] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
     const startMin = sh * 60 + sm;
     const endMin = eh * 60 + em;
-    let diff = (endMin - startMin) / 60 - pause;
+    let diff = (endMin - startMin) / 60;
     if (diff < 0) diff = 0;
     return diff.toFixed(2);
   } catch {
