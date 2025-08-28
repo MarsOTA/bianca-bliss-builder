@@ -14,9 +14,10 @@ interface Props {
   onConfirm: (selectedIds: string[]) => void;
 }
 
-const OperatorAssignDialog = ({ open, onOpenChange, operators, onConfirm }: Props) => {
+export default function OperatorAssignDialog({ open, onOpenChange, operators, onConfirm }: Props) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string>("");
+  
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     return operators.filter((o) =>
@@ -28,10 +29,10 @@ const OperatorAssignDialog = ({ open, onOpenChange, operators, onConfirm }: Prop
     setSelected(id);
   };
 
-const confirm = () => {
-  onConfirm(selected ? [selected] : []);
-  setSelected("");
-};
+  const handleConfirm = () => {
+    onConfirm(selected ? [selected] : []);
+    setSelected("");
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,7 +79,7 @@ const confirm = () => {
                   <TableCell>-</TableCell>
                   <TableCell>-</TableCell>
                 </TableRow>
-                {filtered.map((op, idx) => (
+                {filtered.map((op) => (
                   <TableRow 
                     key={op.id} 
                     className={cn(
@@ -110,8 +111,10 @@ const confirm = () => {
             </Table>
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Annulla</Button>
-            <Button onClick={confirm}>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handleConfirm}>
               Assegna operatore
             </Button>
           </div>
@@ -119,6 +122,4 @@ const confirm = () => {
       </DialogContent>
     </Dialog>
   );
-};
-
-export default OperatorAssignDialog;
+}
