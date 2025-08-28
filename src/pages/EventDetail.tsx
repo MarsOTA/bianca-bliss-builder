@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarIcon, Users, Crown, UserPlus, Plus, Trash2, Edit2, Save, X, FileText, ArrowUpDown, ArrowUp, ArrowDown, ListChecks, Clock, Building2, MapPin, Calendar, Badge, Copy, Phone, StickyNote, Lock, Unlock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import OperatorDetailsDialog from "@/components/events/OperatorDetailsDialog";
 import OperatorAssignDialog from "@/components/events/OperatorAssignDialog";
 import ShiftPlanningForm from "@/components/events/ShiftPlanningForm";
@@ -62,6 +63,21 @@ const EventDetail = () => {
 
   // Initialize rowEdit state - unassigned operators start in edit mode
   const [rowEdit, setRowEdit] = useState<Record<string, boolean>>(() => initializeRowEdit(shifts));
+
+  // Update rowEdit when new shifts are added (ensure unassigned ones start in edit mode)
+  useEffect(() => {
+    const newRowEdit = initializeRowEdit(shifts);
+    setRowEdit(prev => {
+      // Only update new rows that don't exist in current state
+      const updated = { ...prev };
+      Object.keys(newRowEdit).forEach(key => {
+        if (!(key in updated)) {
+          updated[key] = newRowEdit[key];
+        }
+      });
+      return updated;
+    });
+  }, [shifts.length]); // Only trigger when shifts array length changes (new shifts added)
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedShiftForEmail, setSelectedShiftForEmail] = useState<any>(null);
   const [operatorDetailsOpen, setOperatorDetailsOpen] = useState(false);
@@ -297,6 +313,21 @@ const EventDetail = () => {
     return arr;
   }, [flattenedShifts, sort, operators]);
 
+  // Calculate total operator hours
+  const totalOperatorHours = useMemo(() => {
+    return sortedShifts.reduce((total, row) => {
+      if (row.isAssigned) {
+        const slotKey = `${row.id}-${row.slotIndex}`;
+        const hours = parseFloat(calculateHours(
+          slotTimes[slotKey]?.startTime || row.startTime,
+          slotTimes[slotKey]?.endTime || row.endTime
+        ));
+        return total + hours;
+      }
+      return total;
+    }, 0);
+  }, [sortedShifts, slotTimes]);
+
   return (
     <main className="container py-8">
       <Helmet>
@@ -316,7 +347,16 @@ const EventDetail = () => {
             <div className="space-y-4">
               {/* Address field */}
               <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <MapPin className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Indirizzo evento</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="flex-1 flex items-center gap-2">
                   {editingField === 'address' ? (
                     <>
@@ -347,7 +387,16 @@ const EventDetail = () => {
               
               {/* Date fields */}
               <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Calendar className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Data inizio e fine evento</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="flex-1">
                   <div className="flex gap-2 items-center">
                     {/* Start Date */}
@@ -415,7 +464,16 @@ const EventDetail = () => {
               
               {/* Activity Code field */}
               <div className="flex items-center gap-3">
-                <Badge className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Codice attività</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="flex-1 flex items-center gap-2">
                   {editingField === 'activityCode' ? (
                     <>
@@ -446,9 +504,17 @@ const EventDetail = () => {
 
               {/* Event Notes field */}
               <div className="flex items-start gap-3">
-                <StickyNote className="h-5 w-5 mt-2" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <StickyNote className="h-5 w-5 mt-2" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Note evento</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="flex-1 flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Note evento:</Label>
                   {editingField === 'notes' ? (
                     <div className="flex flex-col gap-2">
                       <Textarea
@@ -892,6 +958,16 @@ const EventDetail = () => {
               )}
             </TableBody>
           </Table>
+        </div>
+        
+        {/* Total hours summary */}
+        <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">Totale ore operatori:</span>
+            <span className="text-lg font-bold" style={{ color: '#72AD97' }}>
+              {totalOperatorHours.toFixed(1)}h
+            </span>
+          </div>
         </div>
       </section>
 
