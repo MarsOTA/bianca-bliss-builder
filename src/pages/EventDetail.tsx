@@ -60,14 +60,8 @@ const EventDetail = () => {
     return initialState;
   };
 
-  // Update rowEdit when shifts change
+  // Initialize rowEdit state - unassigned operators start in edit mode
   const [rowEdit, setRowEdit] = useState<Record<string, boolean>>(() => initializeRowEdit(shifts));
-  
-  // Update rowEdit when shifts change
-  useEffect(() => {
-    const newRowEdit = initializeRowEdit(shifts);
-    setRowEdit(prev => ({ ...prev, ...newRowEdit }));
-  }, [shifts]);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedShiftForEmail, setSelectedShiftForEmail] = useState<any>(null);
   const [operatorDetailsOpen, setOperatorDetailsOpen] = useState(false);
