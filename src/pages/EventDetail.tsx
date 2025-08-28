@@ -5,7 +5,7 @@ import { useAppStore, ACTIVITY_TYPES, type ActivityType } from "@/store/appStore
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Users, Crown, UserPlus, Plus, Trash2, Edit2, Save, X, FileText, ArrowUpDown, ArrowUp, ArrowDown, ListChecks, Clock, Building2, MapPin, Calendar, Badge, Copy, Phone, Mail, StickyNote } from "lucide-react";
+import { CalendarIcon, Users, Crown, UserPlus, Plus, Trash2, Edit2, Save, X, FileText, ArrowUpDown, ArrowUp, ArrowDown, ListChecks, Clock, Building2, MapPin, Calendar, Badge, Copy, Phone, StickyNote, Lock, Unlock } from "lucide-react";
 import OperatorAssignDialog from "@/components/events/OperatorAssignDialog";
 import ShiftPlanningForm from "@/components/events/ShiftPlanningForm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,6 +32,7 @@ const EventDetail = () => {
   const setTeamLeader = useAppStore(s => s.setTeamLeader);
   const updateShiftNotes = useAppStore(s => s.updateShiftNotes);
   const updateShiftTime = useAppStore(s => s.updateShiftTime);
+  const updateShiftDate = useAppStore(s => s.updateShiftDate);
   const updateShiftActivityType = useAppStore(s => s.updateShiftActivityType);
   const deleteShift = useAppStore(s => s.deleteShift);
   
@@ -45,7 +46,7 @@ const EventDetail = () => {
   const [slotTimes, setSlotTimes] = useState<Record<string, { startTime: string; endTime: string }>>({});
   const [editingPhones, setEditingPhones] = useState<Record<string, string>>({});
   const [slotNotes, setSlotNotes] = useState<Record<string, string>>({});
-  const [lunchBreakHours, setLunchBreakHours] = useState<Record<string, string>>({});
+  const [rowEdit, setRowEdit] = useState<Record<string, boolean>>({});
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedShiftForEmail, setSelectedShiftForEmail] = useState<any>(null);
   const [notePopoverOpen, setNotePopoverOpen] = useState<Record<string, boolean>>({});
@@ -521,7 +522,6 @@ const EventDetail = () => {
                     {sort.key !== 'hours' ? <ArrowUpDown className="h-4 w-4 text-muted-foreground" /> : (sort.dir === 'asc' ? <ArrowUp className="h-4 w-4 text-muted-foreground" /> : <ArrowDown className="h-4 w-4 text-muted-foreground" />)}
                   </Button>
                 </TableHead>
-                <TableHead>PAUSA H.</TableHead>
                 <TableHead>TL</TableHead>
                 <TableHead>NOTE</TableHead>
                 <TableHead>AZIONI</TableHead>
@@ -534,225 +534,278 @@ const EventDetail = () => {
                   className="even:bg-muted transition-all duration-300 hover:bg-muted/80"
                 >
                   <TableCell>
-                    <Input
-                      type="date"
-                      value={row.date}
-                      onChange={(e) => updateShiftTime(row.id, { startTime: row.startTime })}
-                      className="h-8 text-sm"
-                    />
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      <Input
+                        type="date"
+                        value={row.date}
+                        onChange={(e) => updateShiftDate(row.id, e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    ) : (
+                      <span className="text-sm">{new Date(row.date).toLocaleDateString('it-IT')}</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="time"
-                      value={slotTimes[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime}
-                      onChange={(e) => setSlotTimes(prev => ({ 
-                        ...prev, 
-                        [`${row.id}-${row.slotIndex}`]: { 
-                          ...prev[`${row.id}-${row.slotIndex}`], 
-                          startTime: e.target.value,
-                          endTime: prev[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime
-                        }
-                      }))}
-                      className="h-8 text-sm w-24"
-                    />
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      <Input
+                        type="time"
+                        value={slotTimes[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime}
+                        onChange={(e) => setSlotTimes(prev => ({ 
+                          ...prev, 
+                          [`${row.id}-${row.slotIndex}`]: { 
+                            ...prev[`${row.id}-${row.slotIndex}`], 
+                            startTime: e.target.value,
+                            endTime: prev[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime
+                          }
+                        }))}
+                        className="h-8 text-sm w-24"
+                      />
+                    ) : (
+                      <span className="text-sm">{slotTimes[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime}</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="time"
-                      value={slotTimes[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime}
-                      onChange={(e) => setSlotTimes(prev => ({ 
-                        ...prev, 
-                        [`${row.id}-${row.slotIndex}`]: { 
-                          ...prev[`${row.id}-${row.slotIndex}`], 
-                          startTime: prev[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime,
-                          endTime: e.target.value
-                        }
-                      }))}
-                      className="h-8 text-sm w-24"
-                    />
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      <Input
+                        type="time"
+                        value={slotTimes[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime}
+                        onChange={(e) => setSlotTimes(prev => ({ 
+                          ...prev, 
+                          [`${row.id}-${row.slotIndex}`]: { 
+                            ...prev[`${row.id}-${row.slotIndex}`], 
+                            startTime: prev[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime,
+                            endTime: e.target.value
+                          }
+                        }))}
+                        className="h-8 text-sm w-24"
+                      />
+                    ) : (
+                      <span className="text-sm">{slotTimes[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime}</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Select 
-                      value={row.activityType || ""} 
-                      onValueChange={(value) => updateShiftActivityType(row.id, value as ActivityType)}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Seleziona attività" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACTIVITY_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      <Select 
+                        value={row.activityType || ""} 
+                        onValueChange={(value) => updateShiftActivityType(row.id, value as ActivityType)}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Seleziona attività" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ACTIVITY_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-sm">{row.activityType || "Non specificata"}</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    {row.isAssigned ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{getOperatorName(row.operatorId)}</span>
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      row.isAssigned ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{getOperatorName(row.operatorId)}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setCurrentShift(row.id);
+                              setCurrentSlotIndex(row.slotIndex);
+                              setAssignOpen(true);
+                            }}
+                            aria-label={`Modifica operatore ${getOperatorName(row.operatorId)}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="sm" 
                           onClick={() => {
                             setCurrentShift(row.id);
                             setCurrentSlotIndex(row.slotIndex);
                             setAssignOpen(true);
                           }}
-                          aria-label={`Modifica operatore ${getOperatorName(row.operatorId)}`}
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <UserPlus className="h-4 w-4" />
+                          Assegna
                         </Button>
+                      )
+                    ) : (
+                      <span className="text-sm">{row.isAssigned ? getOperatorName(row.operatorId) : "Non assegnato"}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        {row.isAssigned ? (
+                          <Input
+                            value={editingPhones[`${row.id}-${row.slotIndex}`] || getOperatorPhone(row.operatorId)}
+                            onChange={(e) => setEditingPhones(prev => ({ ...prev, [`${row.id}-${row.slotIndex}`]: e.target.value }))}
+                            className="h-6 text-xs w-24"
+                            placeholder="Telefono"
+                          />
+                        ) : (
+                          <span className="text-sm">-</span>
+                        )}
                       </div>
                     ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          setCurrentShift(row.id);
-                          setCurrentSlotIndex(row.slotIndex);
-                          setAssignOpen(true);
+                      <span className="text-sm">{row.isAssigned ? getOperatorPhone(row.operatorId) : "-"}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.5"
+                        value={calculateHours(
+                          slotTimes[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime, 
+                          slotTimes[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime
+                        )}
+                        onChange={(e) => {
+                          const newHours = parseFloat(e.target.value) || 0;
+                          const startTime = slotTimes[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime;
+                          const [startHour, startMinute] = startTime.split(':').map(Number);
+                          const startDate = new Date(2000, 0, 1, startHour, startMinute);
+                          const endDate = new Date(startDate.getTime() + newHours * 60 * 60 * 1000);
+                          const endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+                          
+                          setSlotTimes(prev => ({
+                            ...prev,
+                            [`${row.id}-${row.slotIndex}`]: {
+                              ...prev[`${row.id}-${row.slotIndex}`],
+                              startTime,
+                              endTime
+                            }
+                          }));
                         }}
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        Assegna
-                      </Button>
+                        className="h-8 text-sm w-16 text-center"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {calculateHours(
+                          slotTimes[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime, 
+                          slotTimes[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime
+                        )}h
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      row.isAssigned ? (
+                        <Checkbox
+                          checked={row.teamLeaderId === row.operatorId}
+                          onCheckedChange={() => handleToggleTeamLeader(row.id, row.operatorId, row.teamLeaderId === row.operatorId)}
+                          aria-label={row.teamLeaderId === row.operatorId ? "Rimuovi come team leader" : "Imposta come team leader"}
+                        />
+                      ) : "-"
+                    ) : (
+                      <span className="text-sm">{row.isAssigned && row.teamLeaderId === row.operatorId ? "Sì" : "-"}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                      <div className="flex items-center justify-center">
+                        {(slotNotes[`${row.id}-${row.slotIndex}`] || row.notes) ? (
+                          <Popover 
+                            open={notePopoverOpen[`${row.id}-${row.slotIndex}`]} 
+                            onOpenChange={(open) => setNotePopoverOpen(prev => ({ ...prev, [`${row.id}-${row.slotIndex}`]: open }))}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                aria-label="Visualizza/modifica note"
+                              >
+                                <StickyNote className="h-4 w-4 text-primary" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 pointer-events-auto" align="center">
+                              <div className="space-y-4">
+                                <h4 className="font-medium">Note del turno</h4>
+                                <div className="space-y-2">
+                                  <Label htmlFor="note-edit">Contenuto</Label>
+                                  <Textarea
+                                    id="note-edit"
+                                    value={tempNotes || slotNotes[`${row.id}-${row.slotIndex}`] || row.notes || ""}
+                                    onChange={(e) => setTempNotes(e.target.value)}
+                                    placeholder="Inserisci note per il turno..."
+                                    className="min-h-[80px]"
+                                    onFocus={() => {
+                                      if (!tempNotes) {
+                                        setTempNotes(slotNotes[`${row.id}-${row.slotIndex}`] || row.notes || "");
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleCancelEditNotes(`${row.id}-${row.slotIndex}`)}
+                                    type="button"
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Annulla
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSaveNotes(`${row.id}-${row.slotIndex}`)}
+                                    type="button"
+                                  >
+                                    <Save className="h-4 w-4 mr-1" />
+                                    Salva
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              setEditingNotes(`${row.id}-${row.slotIndex}`);
+                              setTempNotes("");
+                            }}
+                            aria-label="Aggiungi note"
+                          >
+                            <Plus className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm">{(slotNotes[`${row.id}-${row.slotIndex}`] || row.notes) ? "📝" : "-"}</span>
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Phone className="h-3 w-3 text-muted-foreground" />
-                      {row.isAssigned ? (
-                        <Input
-                          value={editingPhones[`${row.id}-${row.slotIndex}`] || getOperatorPhone(row.operatorId)}
-                          onChange={(e) => setEditingPhones(prev => ({ ...prev, [`${row.id}-${row.slotIndex}`]: e.target.value }))}
-                          className="h-6 text-xs w-24"
-                          placeholder="Telefono"
-                        />
-                      ) : (
-                        <span className="text-sm">-</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-medium">
-                      {calculateHours(
-                        slotTimes[`${row.id}-${row.slotIndex}`]?.startTime || row.startTime, 
-                        slotTimes[`${row.id}-${row.slotIndex}`]?.endTime || row.endTime
-                      )}h
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="8"
-                      step="0.5"
-                      value={lunchBreakHours[`${row.id}-${row.slotIndex}`] || ''}
-                      onChange={(e) => setLunchBreakHours(prev => ({ 
-                        ...prev, 
-                        [`${row.id}-${row.slotIndex}`]: e.target.value
-                      }))}
-                      placeholder="0"
-                      className="h-8 text-sm w-16 text-center"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {row.isAssigned ? (
-                      <Checkbox
-                        checked={row.teamLeaderId === row.operatorId}
-                        onCheckedChange={() => handleToggleTeamLeader(row.id, row.operatorId, row.teamLeaderId === row.operatorId)}
-                        aria-label={row.teamLeaderId === row.operatorId ? "Rimuovi come team leader" : "Imposta come team leader"}
-                      />
-                    ) : "-"}
-                  </TableCell>
-                  <TableCell>
-                     <div className="flex items-center justify-center">
-                       {(slotNotes[`${row.id}-${row.slotIndex}`] || row.notes) ? (
-                         <Popover 
-                           open={notePopoverOpen[`${row.id}-${row.slotIndex}`]} 
-                           onOpenChange={(open) => setNotePopoverOpen(prev => ({ ...prev, [`${row.id}-${row.slotIndex}`]: open }))}
-                         >
-                           <PopoverTrigger asChild>
-                             <Button 
-                               variant="ghost" 
-                               size="sm" 
-                               className="h-8 w-8 p-0"
-                               aria-label="Visualizza/modifica note"
-                             >
-                               <StickyNote className="h-4 w-4 text-primary" />
-                             </Button>
-                           </PopoverTrigger>
-                           <PopoverContent className="w-80 pointer-events-auto" align="center">
-                             <div className="space-y-4">
-                               <h4 className="font-medium">Note del turno</h4>
-                               <div className="space-y-2">
-                                 <Label htmlFor="note-edit">Contenuto</Label>
-                                 <Textarea
-                                   id="note-edit"
-                                   value={tempNotes || slotNotes[`${row.id}-${row.slotIndex}`] || row.notes || ""}
-                                   onChange={(e) => setTempNotes(e.target.value)}
-                                   placeholder="Inserisci note per il turno..."
-                                   className="min-h-[80px]"
-                                   onFocus={() => {
-                                     if (!tempNotes) {
-                                       setTempNotes(slotNotes[`${row.id}-${row.slotIndex}`] || row.notes || "");
-                                     }
-                                   }}
-                                 />
-                               </div>
-                               <div className="flex justify-end gap-2">
-                                 <Button
-                                   variant="outline"
-                                   size="sm"
-                                   onClick={() => handleCancelEditNotes(`${row.id}-${row.slotIndex}`)}
-                                   type="button"
-                                 >
-                                   <X className="h-4 w-4 mr-1" />
-                                   Annulla
-                                 </Button>
-                                 <Button
-                                   size="sm"
-                                   onClick={() => handleSaveNotes(`${row.id}-${row.slotIndex}`)}
-                                   type="button"
-                                 >
-                                   <Save className="h-4 w-4 mr-1" />
-                                   Salva
-                                 </Button>
-                               </div>
-                             </div>
-                           </PopoverContent>
-                         </Popover>
-                      ) : (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            setEditingNotes(`${row.id}-${row.slotIndex}`);
-                            setTempNotes("");
-                          }}
-                          aria-label="Aggiungi note"
-                        >
-                          <Plus className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {row.isAssigned && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendEmail(row)}
-                          aria-label={`Invia email a ${getOperatorName(row.operatorId)}`}
-                          title="Invia email all'operatore"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const rowKey = `${row.id}-${row.slotIndex}`;
+                          setRowEdit(prev => ({ ...prev, [rowKey]: !prev[rowKey] }));
+                        }}
+                        className="h-8 w-8 p-0 transition-all duration-300 hover:scale-110"
+                        aria-label={rowEdit[`${row.id}-${row.slotIndex}`] ? "Blocca modifiche" : "Abilita modifiche"}
+                      >
+                        {rowEdit[`${row.id}-${row.slotIndex}`] ? (
+                          <Unlock className="h-4 w-4 text-green-600 transition-transform duration-300" />
+                        ) : (
+                          <Lock className="h-4 w-4 text-muted-foreground transition-transform duration-300" />
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -788,7 +841,7 @@ const EventDetail = () => {
               ))}
               {sortedShifts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                     Nessun turno pianificato. Crea il primo turno.
                   </TableCell>
                 </TableRow>
@@ -832,7 +885,7 @@ const EventDetail = () => {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+              <StickyNote className="h-5 w-5" />
               Invia email all'operatore
             </DialogTitle>
           </DialogHeader>
@@ -875,7 +928,7 @@ const EventDetail = () => {
                   Annulla
                 </Button>
                 <Button onClick={confirmSendEmail}>
-                  <Mail className="h-4 w-4 mr-1" />
+                  <StickyNote className="h-4 w-4 mr-1" />
                   Invia
                 </Button>
               </div>

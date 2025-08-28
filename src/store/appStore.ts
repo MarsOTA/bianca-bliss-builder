@@ -130,6 +130,7 @@ interface AppState {
   setTeamLeader: (shiftId: ID, operatorId: ID) => void;
   updateShiftNotes: (shiftId: ID, notes: string) => void;
   updateShiftTime: (shiftId: ID, data: { startTime?: string; endTime?: string }) => void;
+  updateShiftDate: (shiftId: ID, date: string) => void;
   updateShiftActivityType: (shiftId: ID, activityType: ActivityType | undefined) => void;
   deleteShift: (shiftId: ID) => void;
   getShiftsByEvent: (eventId: ID) => Shift[];
@@ -432,6 +433,14 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           shifts: state.shifts.map((s) =>
             s.id === shiftId ? { ...s, ...data } : s
+          ),
+        }));
+      },
+
+      updateShiftDate: (shiftId, date) => {
+        set((state) => ({
+          shifts: state.shifts.map((s) =>
+            s.id === shiftId ? { ...s, date } : s
           ),
         }));
       },
