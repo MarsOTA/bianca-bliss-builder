@@ -337,18 +337,21 @@ export type Database = {
           created_at: string | null
           id: string
           operator_id: string | null
+          role: Database["public"]["Enums"]["user_role"]
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id: string
           operator_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           operator_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
         Relationships: []
@@ -429,6 +432,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shift_checkins: {
+        Row: {
+          check_in_time: string | null
+          check_out_time: string | null
+          created_at: string | null
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          notes: string | null
+          operator_id: string
+          shift_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          notes?: string | null
+          operator_id: string
+          shift_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          notes?: string | null
+          operator_id?: string
+          shift_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       shifts: {
         Row: {
@@ -527,7 +569,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["user_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       activity_type:
@@ -545,6 +597,7 @@ export type Database = {
         | "shift_assignment"
         | "shift_update"
         | "shift_cancellation"
+      user_role: "admin" | "operator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -689,6 +742,7 @@ export const Constants = {
         "shift_update",
         "shift_cancellation",
       ],
+      user_role: ["admin", "operator"],
     },
   },
 } as const
