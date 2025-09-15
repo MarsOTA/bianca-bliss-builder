@@ -3,12 +3,14 @@ import { Shield, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import InstallButton from "./InstallButton";
-import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { SupabaseNotificationBell } from '@/components/notifications/SupabaseNotificationBell';
 import { useAuth } from "@/hooks/useAuth";
+import { useRole } from "@/hooks/useRole";
 
 const Header = () => {
   const { pathname } = useLocation();
   const { signOut } = useAuth();
+  const { isAdmin, loading: roleLoading } = useRole();
   const isActive = (path: string) => pathname.startsWith(path);
 
   return (
@@ -18,32 +20,34 @@ const Header = () => {
           <Shield className="w-5 h-5 text-header-foreground" />
           <span className="font-semibold text-lg tracking-wide">DETELDER EZYSTAFF</span>
         </Link>
-        <nav className="flex items-center gap-1">
-          <Link
-            to="/clienti"
-            className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors rounded-md",
-              isActive("/clienti") 
-                ? "bg-header-foreground/10 text-header-foreground" 
-                : "text-header-foreground/80 hover:text-header-foreground hover:bg-header-foreground/5"
-            )}
-          >
-            CLIENTI
-          </Link>
-          <Link
-            to="/events"
-            className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors rounded-md",
-              isActive("/events") 
-                ? "bg-header-foreground/10 text-header-foreground" 
-                : "text-header-foreground/80 hover:text-header-foreground hover:bg-header-foreground/5"
-            )}
-          >
-            EVENTI
-          </Link>
-        </nav>
+        {!roleLoading && isAdmin && (
+          <nav className="flex items-center gap-1">
+            <Link
+              to="/clienti"
+              className={cn(
+                "px-4 py-2 text-sm font-medium transition-colors rounded-md",
+                isActive("/clienti") 
+                  ? "bg-header-foreground/10 text-header-foreground" 
+                  : "text-header-foreground/80 hover:text-header-foreground hover:bg-header-foreground/5"
+              )}
+            >
+              CLIENTI
+            </Link>
+            <Link
+              to="/events"
+              className={cn(
+                "px-4 py-2 text-sm font-medium transition-colors rounded-md",
+                isActive("/events") 
+                  ? "bg-header-foreground/10 text-header-foreground" 
+                  : "text-header-foreground/80 hover:text-header-foreground hover:bg-header-foreground/5"
+              )}
+            >
+              EVENTI
+            </Link>
+          </nav>
+        )}
         <div className="flex items-center gap-3">
-          <NotificationBell />
+          <SupabaseNotificationBell />
           <InstallButton />
           <Button
             onClick={signOut}

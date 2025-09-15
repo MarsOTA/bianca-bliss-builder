@@ -12,6 +12,8 @@ import CreateEvent from "./pages/CreateEvent";
 import EventDetail from "./pages/EventDetail";
 import Clienti from "./pages/Clienti";
 import NotificationSettingsPage from "./pages/NotificationSettings";
+import OperatorDashboard from "./pages/OperatorDashboard";
+import OperatorShiftDetail from "./pages/OperatorShiftDetail";
 import Auth from "./pages/Auth";
 import Header from "./components/layout/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -61,6 +63,18 @@ const App = () => (
               <ProtectedRoute>
                 <Header />
                 <NotificationSettingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/operator/dashboard" element={
+              <ProtectedRoute>
+                <Header />
+                <OperatorDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/operator/shift/:shiftId" element={
+              <ProtectedRoute>
+                <Header />
+                <OperatorShiftDetail />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

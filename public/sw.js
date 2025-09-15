@@ -35,65 +35,93 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   console.log('Push notification received:', event);
   
-  const options = {
-    body: 'Default notification body',
+  const defaultOptions = {
+    body: 'Nuova notifica disponibile',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
-    data: {},
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: '1',
+      url: '/operator/dashboard'
+    },
     actions: [
       {
         action: 'view',
         title: 'Visualizza',
         icon: '/pwa-192x192.png'
-      },
-      {
-        action: 'close',
-        title: 'Chiudi'
       }
     ]
   };
 
+  let notificationOptions = defaultOptions;
+
   if (event.data) {
-    const data = event.data.json();
-    options.body = data.body || options.body;
-    options.title = data.title || 'EZYSTAFF - Notifica Turno';
-    options.data = data;
+    try {
+      const pushData = event.data.json();
+      console.log('Push data received:', pushData);
+      
+      notificationOptions = {
+        ...defaultOptions,
+        title: pushData.title || 'EZYSTAFF',
+        body: pushData.body || defaultOptions.body,
+        data: {
+          ...defaultOptions.data,
+          ...pushData.data
+        }
+      };
+    } catch (e) {
+      console.error('Error parsing push data:', e);
+    }
   }
 
   event.waitUntil(
-    self.registration.showNotification(options.title || 'EZYSTAFF', options)
+    self.registration.showNotification(
+      notificationOptions.title || 'EZYSTAFF',
+      notificationOptions
+    )
   );
 });
 
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
+  console.log('Notification click received:', event);
+  
   event.notification.close();
-  
-  const data = event.notification.data || {};
-  
+
   if (event.action === 'view' || !event.action) {
-    // Open the app and navigate to relevant page
-    const urlToOpen = data.url || '/';
+    const urlToOpen = event.notification.data?.url || '/operator/dashboard';
     
     event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true })
-        .then((clientList) => {
-          // Check if app is already open
-          for (let i = 0; i < clientList.length; i++) {
-            const client = clientList[i];
-            if (client.url.includes(self.location.origin)) {
-              client.focus();
+      clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true
+      }).then(function(clientList) {
+        // Try to focus existing window
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url.includes(self.location.origin)) {
+            client.focus();
+            // Try to navigate if client supports it
+            if ('navigate' in client) {
+              client.navigate(self.location.origin + urlToOpen);
+            } else {
+              // Fallback: post message to client for navigation
               client.postMessage({ 
                 action: 'navigate', 
                 url: urlToOpen,
-                notificationData: data 
+                notificationData: event.notification.data 
               });
-              return;
             }
+            return;
           }
-          // If no client is open, open a new one
-          return clients.openWindow(urlToOpen);
-        })
+        }
+        
+        // If no existing window, open new one
+        if (clients.openWindow) {
+          return clients.openWindow(self.location.origin + urlToOpen);
+        }
+      })
     );
   }
 });
